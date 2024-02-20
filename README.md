@@ -2,7 +2,7 @@
 
 ## Goal
 
-Fork and improve this repo so that anyone can clone and run there own server node that
+Fork and improve this repo so that anyone can clone and run their own server node that
 * automatically joins the network of joker nodes (OK to use a hard-coded bootstrap node)
 * publishes the CID of a joke every minute
 * logs the jokes of every other node on the network
