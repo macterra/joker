@@ -1,13 +1,11 @@
 import { createHelia } from 'helia';
 import { FsBlockstore } from 'blockstore-fs';
 import { json } from '@helia/json';
-
 import axios from 'axios';
-import cron from 'node-cron';
 
 const blockstore = new FsBlockstore('./ipfs');
 const helia = await createHelia({ blockstore });
-let ipfs = json(helia);
+const ipfs = json(helia);
 
 async function getJoke() {
     const response = await axios.get('https://icanhazdadjoke.com/', {
@@ -35,16 +33,16 @@ async function logJoke(cid) {
 async function main() {
     const joke = await getJoke();
     const cid = await publishJoke(joke);
-    logJoke(cid);
+    await logJoke(cid);
 }
 
-cron.schedule('* * * * *', async () => {
+setInterval(async () => {
     try {
         await main();
     }
     catch (error) {
-        console.error(`Error in cron job: ${error}`);
+        console.error(`Error: ${error}`);
     }
-});
+}, 60000);
 
 main();
