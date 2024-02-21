@@ -21,7 +21,9 @@
   "dependencies": {
     "@helia/json": "^3.0.0",
     "axios": "^1.6.7",
+    "b4a": "^1.6.6",
     "blockstore-fs": "^1.1.10",
-    "helia": "^4.0.1"
+    "helia": "^4.0.1",
+    "hyperswarm": "^4.7.14"
   }
 }
