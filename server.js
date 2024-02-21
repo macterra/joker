@@ -35,8 +35,8 @@ async function publishJoke(joke) {
     const cid = await ipfs.add(joke);
 
     for (const conn of conns) {
-        const name = b4a.toString(conn.remotePublicKey, 'hex');
-        console.log(`send: ${name}`);
+        // const name = b4a.toString(conn.remotePublicKey, 'hex');
+        // console.log(`send: ${name}`);
         conn.write(JSON.stringify(joke));
     }
 
@@ -44,13 +44,13 @@ async function publishJoke(joke) {
 }
 
 async function receiveJoke(name, joke) {
-    console.log(`from: ${name}`);
     const cid = await ipfs.add(JSON.parse(joke));
-    await logJoke(cid);
+    await logJoke(cid, name);
 }
 
-async function logJoke(cid) {
+async function logJoke(cid, name = 'local') {
     const joke = await ipfs.get(cid);
+    console.log(`from: ${name}`);
     console.log(cid);
     console.log(joke.joke);
     console.log('---');
@@ -80,4 +80,12 @@ const discovery = swarm.join(topic, { client: true, server: true });
 discovery.flushed().then(() => {
     console.log('joined topic:', b4a.toString(topic, 'hex'));
     main();
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('Unhandled exception caught:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled rejection at:', promise, 'reason:', reason);
 });
