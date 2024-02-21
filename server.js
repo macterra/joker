@@ -17,7 +17,7 @@ swarm.on('connection', conn => {
     console.log('* got a connection from:', name, '*');
     conns.push(conn);
     conn.once('close', () => conns.splice(conns.indexOf(conn), 1));
-    conn.on('data', data => receiveJoke(data));
+    conn.on('data', data => receiveJoke(name, data));
 });
 
 async function getJoke() {
@@ -35,13 +35,16 @@ async function publishJoke(joke) {
     const cid = await ipfs.add(joke);
 
     for (const conn of conns) {
+        const name = b4a.toString(conn.remotePublicKey, 'hex');
+        console.log(`send: ${name}`);
         conn.write(JSON.stringify(joke));
     }
 
     return cid;
 }
 
-async function receiveJoke(joke) {
+async function receiveJoke(name, joke) {
+    console.log(`from: ${name}`);
     const cid = await ipfs.add(JSON.parse(joke));
     await logJoke(cid);
 }
@@ -66,16 +69,15 @@ setInterval(async () => {
     catch (error) {
         console.error(`Error: ${error}`);
     }
-}, 60000);
-
-main();
+}, 10000);
 
 // Join a common topic
-const secret = 'c388086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
+const secret = 'c488086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
 const topic = b4a.from(secret, 'hex');
 const discovery = swarm.join(topic, { client: true, server: true });
 
 // The flushed promise will resolve when the topic has been fully announced to the DHT
 discovery.flushed().then(() => {
     console.log('joined topic:', b4a.toString(topic, 'hex'));
+    main();
 });
