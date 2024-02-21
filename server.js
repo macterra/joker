@@ -35,8 +35,6 @@ async function publishJoke(joke) {
     const cid = await ipfs.add(joke);
 
     for (const conn of conns) {
-        // const name = b4a.toString(conn.remotePublicKey, 'hex');
-        // console.log(`send: ${name}`);
         conn.write(JSON.stringify(joke));
     }
 
@@ -69,7 +67,7 @@ setInterval(async () => {
     catch (error) {
         console.error(`Error: ${error}`);
     }
-}, 10000);
+}, 60000);
 
 // Join a common topic
 const secret = 'c488086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
@@ -83,7 +81,7 @@ discovery.flushed().then(() => {
 });
 
 process.on('uncaughtException', (error) => {
-    console.error('Unhandled exception caught:', error);
+    console.error('Unhandled exception caught');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
