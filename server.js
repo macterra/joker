@@ -13,11 +13,11 @@ const ipfs = json(helia);
 // Keep track of all connections and console.log incoming data
 const conns = [];
 swarm.on('connection', conn => {
-    const name = b4a.toString(conn.remotePublicKey, 'hex')
-    console.log('* got a connection from:', name, '*')
-    conns.push(conn)
-    conn.once('close', () => conns.splice(conns.indexOf(conn), 1))
-    conn.on('data', data => console.log(`${name}: ${data}`))
+    const name = b4a.toString(conn.remotePublicKey, 'hex');
+    console.log('* got a connection from:', name, '*');
+    conns.push(conn);
+    conn.once('close', () => conns.splice(conns.indexOf(conn), 1));
+    conn.on('data', data => receiveJoke(data));
 });
 
 async function getJoke() {
@@ -39,6 +39,11 @@ async function publishJoke(joke) {
     }
 
     return cid;
+}
+
+async function receiveJoke(joke) {
+    const cid = await ipfs.add(JSON.parse(joke));
+    await logJoke(cid);
 }
 
 async function logJoke(cid) {
