@@ -51,7 +51,7 @@ async function logJoke(cid, name = 'local') {
     console.log(`from: ${name}`);
     console.log(cid);
     console.log(joke.joke);
-    console.log('---');
+    console.log(`--- ${conns.length} nodes connected`);
 }
 
 async function main() {
