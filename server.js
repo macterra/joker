@@ -1,6 +1,7 @@
 import { createHelia } from 'helia';
 import { FsBlockstore } from 'blockstore-fs';
 import { json } from '@helia/json';
+import { CID } from 'multiformats/cid';
 import axios from 'axios';
 import Hyperswarm from 'hyperswarm';
 import b4a from 'b4a';
@@ -32,21 +33,46 @@ async function getJoke() {
 }
 
 async function publishJoke(joke) {
-    const cid = await ipfs.add(joke);
+    try {
+        const cid = await ipfs.add(joke);
 
-    for (const conn of conns) {
-        conn.write(JSON.stringify(joke));
+        const msg = JSON.stringify({
+            cid: cid.toString(),
+            data: joke,
+        });
+
+        await receiveJoke('local', msg);
+
+        for (const conn of conns) {
+            conn.write(msg);
+        }
+
+        return cid;
     }
-
-    return cid;
+    catch (error) {
+        console.log(error);
+    }
 }
 
-async function receiveJoke(name, joke) {
-    const cid = await ipfs.add(JSON.parse(joke));
-    await logJoke(cid, name);
+async function receiveJoke(name, json) {
+    try {
+        const msg = JSON.parse(json);
+        const msgCID = CID.parse(msg.cid);
+        const data = await ipfs.get(msgCID);
+
+        if (msg.data.joke === data.joke) {
+            await logJoke(msgCID, name);
+        }
+        else {
+            await publishJoke(data.joke);
+        }
+    }
+    catch (error) {
+        console.log(error);
+    }
 }
 
-async function logJoke(cid, name = 'local') {
+async function logJoke(cid, name) {
     const joke = await ipfs.get(cid);
     console.log(`from: ${name}`);
     console.log(cid);
@@ -56,8 +82,7 @@ async function logJoke(cid, name = 'local') {
 
 async function main() {
     const joke = await getJoke();
-    const cid = await publishJoke(joke);
-    await logJoke(cid);
+    await publishJoke(joke);
 }
 
 setInterval(async () => {
@@ -67,10 +92,10 @@ setInterval(async () => {
     catch (error) {
         console.error(`Error: ${error}`);
     }
-}, 60000);
+}, 5000);
 
 // Join a common topic
-const secret = 'c488086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
+const secret = 'c588086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
 const topic = b4a.from(secret, 'hex');
 const discovery = swarm.join(topic, { client: true, server: true });
 
