@@ -1,7 +1,6 @@
 import { createHelia } from 'helia';
 import { FsBlockstore } from 'blockstore-fs';
 import { json } from '@helia/json';
-import { CID } from 'multiformats/cid';
 import axios from 'axios';
 import Hyperswarm from 'hyperswarm';
 import b4a from 'b4a';
@@ -10,6 +9,7 @@ const swarm = new Hyperswarm();
 const blockstore = new FsBlockstore('./ipfs');
 const helia = await createHelia({ blockstore });
 const ipfs = json(helia);
+const mockIPFS = {};
 
 // Keep track of all connections and console.log incoming data
 const conns = [];
@@ -29,46 +29,64 @@ async function getJoke() {
         }
     });
 
-    return response.data;
+    return {
+        ...response.data,
+        time: new Date().toISOString(),
+    };
 }
 
-async function publishJoke(joke) {
+async function publishJoke(joke, from = 'local') {
     try {
         const cid = await ipfs.add(joke);
 
-        const msg = JSON.stringify({
+        mockIPFS[cid] = joke;
+
+        await logJoke(cid, from);
+
+        const msg = {
             cid: cid.toString(),
             data: joke,
-        });
+            relays: [],
+        };
 
-        await receiveJoke('local', msg);
-
-        for (const conn of conns) {
-            conn.write(msg);
-        }
-
-        return cid;
+        return msg;
     }
     catch (error) {
         console.log(error);
+    }
+}
+
+async function relayJoke(msg) {
+    const json = JSON.stringify(msg);
+
+    for (const conn of conns) {
+        const name = b4a.toString(conn.remotePublicKey, 'hex');
+
+        if (!msg.relays.includes(name)) {
+            conn.write(json);
+        }
+        else {
+            //console.log(`!!! ${json} includes ${name} so not resending`);
+        }
     }
 }
 
 async function receiveJoke(name, json) {
     try {
         const msg = JSON.parse(json);
-        const msgCID = CID.parse(msg.cid);
-        const data = await ipfs.get(msgCID);
+        const data = mockIPFS[msg.cid];
 
-        if (msg.data.joke === data.joke) {
-            await logJoke(msgCID, name);
+        if (!data) {
+            msg.relays.push(name);
+            await publishJoke(msg.data, msg.relays[0]);
+            await relayJoke(msg);
         }
         else {
-            await publishJoke(data.joke);
+            //console.log(`already seen ${msg.cid}`);
         }
     }
     catch (error) {
-        console.log(error);
+        console.log('receiveJoke error:', error);
     }
 }
 
@@ -82,7 +100,8 @@ async function logJoke(cid, name) {
 
 async function main() {
     const joke = await getJoke();
-    await publishJoke(joke);
+    const msg = await publishJoke(joke);
+    await relayJoke(msg);
 }
 
 setInterval(async () => {
@@ -92,7 +111,7 @@ setInterval(async () => {
     catch (error) {
         console.error(`Error: ${error}`);
     }
-}, 5000);
+}, 60000);
 
 // Join a common topic
 const secret = 'c588086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
