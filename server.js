@@ -11,7 +11,7 @@ const helia = await createHelia({ blockstore });
 const ipfs = json(helia);
 const mockIPFS = {};
 
-// Keep track of all connections and console.log incoming data
+// Keep track of all connections
 const conns = [];
 swarm.on('connection', conn => {
     const name = b4a.toString(conn.remotePublicKey, 'hex');
@@ -65,9 +65,6 @@ async function relayJoke(msg) {
         if (!msg.relays.includes(name)) {
             conn.write(json);
         }
-        else {
-            //console.log(`!!! ${json} includes ${name} so not resending`);
-        }
     }
 }
 
@@ -80,9 +77,6 @@ async function receiveJoke(name, json) {
             msg.relays.push(name);
             await publishJoke(msg.data, msg.relays[0]);
             await relayJoke(msg);
-        }
-        else {
-            //console.log(`already seen ${msg.cid}`);
         }
     }
     catch (error) {
