@@ -1,15 +1,20 @@
 import { createHelia } from 'helia';
-import { FsBlockstore } from 'blockstore-fs';
 import { json } from '@helia/json';
 import axios from 'axios';
 import Hyperswarm from 'hyperswarm';
+import goodbye from 'graceful-goodbye';
 import b4a from 'b4a';
 
+import { EventEmitter } from 'events';
+EventEmitter.defaultMaxListeners = 100;
+
 const swarm = new Hyperswarm();
-const blockstore = new FsBlockstore('./ipfs');
-const helia = await createHelia({ blockstore });
+goodbye(() => swarm.destroy())
+
+const helia = await createHelia();
 const ipfs = json(helia);
 const mockIPFS = {};
+const nodes = {};
 
 // Keep track of all connections
 const conns = [];
@@ -35,13 +40,12 @@ async function getJoke() {
     };
 }
 
-async function publishJoke(joke, from = 'local') {
+async function publishJoke1(joke) {
     try {
         const cid = await ipfs.add(joke);
 
         mockIPFS[cid] = joke;
-
-        await logJoke(cid, from);
+        await logJoke(cid, 'local');
 
         const msg = {
             cid: cid.toString(),
@@ -49,7 +53,18 @@ async function publishJoke(joke, from = 'local') {
             relays: [],
         };
 
-        return msg;
+        await relayJoke(msg);
+    }
+    catch (error) {
+        console.log(error);
+    }
+}
+
+async function publishJoke2(msg) {
+    try {
+        mockIPFS[msg.cid] = msg.data;
+        await logJoke(msg.cid, msg.relays[0]);
+        await relayJoke(msg);
     }
     catch (error) {
         console.log(error);
@@ -75,8 +90,7 @@ async function receiveJoke(name, json) {
 
         if (!data) {
             msg.relays.push(name);
-            await publishJoke(msg.data, msg.relays[0]);
-            await relayJoke(msg);
+            await publishJoke2(msg);
         }
     }
     catch (error) {
@@ -85,17 +99,20 @@ async function receiveJoke(name, json) {
 }
 
 async function logJoke(cid, name) {
-    const joke = await ipfs.get(cid);
+    const joke = mockIPFS[cid];
+
+    nodes[name] = (nodes[name] || 0) + 1;
+    const detected = Object.keys(nodes).length;
+
     console.log(`from: ${name}`);
     console.log(cid);
     console.log(joke.joke);
-    console.log(`--- ${conns.length} nodes connected`);
+    console.log(`--- ${conns.length} nodes connected, ${detected} nodes detected`);
 }
 
 async function main() {
     const joke = await getJoke();
-    const msg = await publishJoke(joke);
-    await relayJoke(msg);
+    await publishJoke1(joke);
 }
 
 setInterval(async () => {
@@ -125,4 +142,10 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
     //console.error('Unhandled rejection at:', promise, 'reason:', reason);
     console.error('Unhandled rejection caught');
+});
+
+process.stdin.on('data', d => {
+    if (d.toString().startsWith('q')) {
+        process.exit();
+    }
 });
