@@ -126,7 +126,7 @@ setInterval(async () => {
 }, 10000);
 
 // Join a common topic
-const networkID = 'c688086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
+const networkID = 'c588086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
 const topic = b4a.from(networkID, 'hex');
 const discovery = swarm.join(topic, { client: true, server: true });
 
