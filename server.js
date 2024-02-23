@@ -40,7 +40,7 @@ async function getJoke() {
     };
 }
 
-async function publishJoke1(joke) {
+async function publishJoke(joke) {
     try {
         const cid = await ipfs.add(joke);
 
@@ -60,7 +60,7 @@ async function publishJoke1(joke) {
     }
 }
 
-async function publishJoke2(msg) {
+async function republishJoke(msg) {
     try {
         mockIPFS[msg.cid] = msg.data;
         await logJoke(msg.cid, msg.relays[0]);
@@ -90,7 +90,7 @@ async function receiveJoke(name, json) {
 
         if (!data) {
             msg.relays.push(name);
-            await publishJoke2(msg);
+            await republishJoke(msg);
         }
     }
     catch (error) {
@@ -112,7 +112,7 @@ async function logJoke(cid, name) {
 
 async function main() {
     const joke = await getJoke();
-    await publishJoke1(joke);
+    await publishJoke(joke);
 }
 
 setInterval(async () => {
