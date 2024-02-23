@@ -123,7 +123,7 @@ setInterval(async () => {
     catch (error) {
         console.error(`Error: ${error}`);
     }
-}, 10000);
+}, 60000);
 
 // Join a common topic
 const networkID = 'c588086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
