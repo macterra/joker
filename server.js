@@ -1,9 +1,9 @@
-import { createHelia } from 'helia';
-import { json } from '@helia/json';
 import axios from 'axios';
 import Hyperswarm from 'hyperswarm';
 import goodbye from 'graceful-goodbye';
 import b4a from 'b4a';
+import { sha256 } from '@noble/hashes/sha256';
+import canonicalize from 'canonicalize';
 
 import { EventEmitter } from 'events';
 EventEmitter.defaultMaxListeners = 100;
@@ -11,8 +11,6 @@ EventEmitter.defaultMaxListeners = 100;
 const swarm = new Hyperswarm();
 goodbye(() => swarm.destroy())
 
-const helia = await createHelia();
-const ipfs = json(helia);
 const mockIPFS = {};
 const nodes = {};
 
@@ -40,9 +38,16 @@ async function getJoke() {
     };
 }
 
+function hashJSON(json) {
+    const msg = canonicalize(json);
+    const hash = sha256(msg);
+    return Buffer.from(hash).toString('hex');
+}
+
 async function publishJoke(joke) {
     try {
-        const cid = await ipfs.add(joke);
+        //const cid = await ipfs.add(joke);
+        const cid = hashJSON(joke);
 
         mockIPFS[cid] = joke;
         logJoke(cid, 'local');
@@ -118,10 +123,10 @@ setInterval(async () => {
     catch (error) {
         console.error(`Error: ${error}`);
     }
-}, 60000);
+}, 10000);
 
 // Join a common topic
-const networkID = 'c588086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
+const networkID = 'c688086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
 const topic = b4a.from(networkID, 'hex');
 const discovery = swarm.join(topic, { client: true, server: true });
 
