@@ -45,7 +45,7 @@ async function publishJoke(joke) {
         const cid = await ipfs.add(joke);
 
         mockIPFS[cid] = joke;
-        await logJoke(cid, 'local');
+        logJoke(cid, 'local');
 
         const msg = {
             cid: cid.toString(),
@@ -63,7 +63,7 @@ async function publishJoke(joke) {
 async function republishJoke(msg) {
     try {
         mockIPFS[msg.cid] = msg.data;
-        await logJoke(msg.cid, msg.relays[0]);
+        logJoke(msg.cid, msg.relays[0]);
         await relayJoke(msg);
     }
     catch (error) {
@@ -98,7 +98,7 @@ async function receiveJoke(name, json) {
     }
 }
 
-async function logJoke(cid, name) {
+function logJoke(cid, name) {
     const joke = mockIPFS[cid];
 
     nodes[name] = (nodes[name] || 0) + 1;
@@ -110,14 +110,10 @@ async function logJoke(cid, name) {
     console.log(`--- ${conns.length} nodes connected, ${detected} nodes detected`);
 }
 
-async function main() {
-    const joke = await getJoke();
-    await publishJoke(joke);
-}
-
 setInterval(async () => {
     try {
-        await main();
+        const joke = await getJoke();
+        await publishJoke(joke);
     }
     catch (error) {
         console.error(`Error: ${error}`);
@@ -125,14 +121,13 @@ setInterval(async () => {
 }, 60000);
 
 // Join a common topic
-const secret = 'c588086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
-const topic = b4a.from(secret, 'hex');
+const networkID = 'c588086b88e10499e68857354647c6b70c198998a6cd1f23c43958765ccc4c5f';
+const topic = b4a.from(networkID, 'hex');
 const discovery = swarm.join(topic, { client: true, server: true });
 
 // The flushed promise will resolve when the topic has been fully announced to the DHT
 discovery.flushed().then(() => {
     console.log('joined topic:', b4a.toString(topic, 'hex'));
-    main();
 });
 
 process.on('uncaughtException', (error) => {
